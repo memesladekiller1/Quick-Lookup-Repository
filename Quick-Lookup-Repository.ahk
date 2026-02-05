@@ -1,18 +1,31 @@
 #Requires AutoHotkey v2.0
 
+; USER CUSTOMIZATION SETTINGS
 
-; SETTINGS
-
+; 1. PATH SETTINGS
 Global REPOSITORY_FOLDER := EnvGet("USERPROFILE") . "\Downloads\DataBase"
+
+; 2. SEARCH MARKERS
 Global START_TAG := "--start"
 Global END_TAG   := "--end"
 
+; 3. VISUAL SETTINGS (Stealth Bar)
+Global STEALTH_BG_COLOR := "202020"    ; Dark Gray hex code
+Global STEALTH_TEXT_COLOR := "cWhite"  ; White text
+Global STEALTH_FONT_SIZE := "s12"      ; Font size
+Global STEALTH_FONT_FACE := "Segoe UI SemiLight"
+
+; 4. TIMING
+Global TOOLTIP_DURATION := -1000       ; How long "Data Retrieved" stays (ms)
+
+
+; MODE 1: VISUAL REPOSITORY (Shift + L) - Shows a scrollable window
 +l:: {
-    IB := InputBox("Content Search: keywords /FILENAME", "Quick-Lookup Repository", "w400 h120")
+    IB := InputBox("Query: keywords /FILENAME", "Quick-Lookup Repository", "w400 h120")
     if (IB.Result = "Cancel" || IB.Value = "")
         return
 
-    result := PerformContentSearch(IB.Value)
+    result := PerformSearch(IB.Value)
     
     if (result != "") {
         ResultGui := Gui("+AlwaysOnTop", "Repository Result")
@@ -20,59 +33,60 @@ Global END_TAG   := "--end"
         ResultGui.Add("Edit", "ReadOnly vScroll r15 w550", result)
         ResultGui.Add("Button", "Default w100", "Close").OnEvent("Click", (*) => ResultGui.Destroy())
         ResultGui.Show()
-    } else {
-        MsgBox("No matching content found.")
     }
 }
 
-
-; MODE 2: SMART FILE LAUNCHER (Ctrl + P)
-
+; MODE 2: STEALTH RETRIEVAL (Ctrl + P) - Copies directly to clipboard
 ^p:: {
-    IB := InputBox("Launch File: /Folder/File.ext", "Smart File Launcher", "w450 h120")
-    if (IB.Result = "Cancel" || IB.Value = "")
-        return
+    ; Create borderless, sleek retrieval bar at mouse position
+    StealthGui := Gui("-Caption +AlwaysOnTop +ToolWindow")
+    StealthGui.BackColor := STEALTH_BG_COLOR 
+    StealthGui.SetFont(STEALTH_FONT_SIZE . " " . STEALTH_TEXT_COLOR, STEALTH_FONT_FACE)
+    
+    EditField := StealthGui.Add("Edit", "w350 r1 -E0x200 Background333333") 
+    Btn := StealthGui.Add("Button", "Default w0 h0", "OK")
+    Btn.OnEvent("Click", ProcessInput)
 
-    ; Convert / to \ and handle User Profile path
-    cleanInput := StrReplace(IB.Value, "/", "\")
-    if (SubStr(cleanInput, 1, 1) = "\")
-        fullPath := EnvGet("USERPROFILE") . cleanInput
-    else
-        fullPath := cleanInput
+    MouseGetPos(&mX, &mY)
+    StealthGui.Show("x" . mX . " y" . mY)
 
-    SplitPath(fullPath, &targetFile, &targetDir)
-
-    ; 1. Fix Directory if misspelled
-    if !DirExist(targetDir)
-        targetDir := FindBestMatch(RegExReplace(targetDir, "\\[^\\]+$"), RegExReplace(targetDir, ".*\\"), "D")
-
-    ; 2. Fix Filename if misspelled
-    bestFile := FindBestMatch(targetDir, targetFile, "F")
-
-    if (bestFile != "") {
-        try {
-            Run(bestFile)
-            ToolTip("Launching: " . bestFile)
-            SetTimer () => ToolTip(), -2000
-        } catch {
-            MsgBox("Found " . bestFile . " but system could not open it.")
+    ProcessInput(*) {
+        userInput := EditField.Value
+        StealthGui.Destroy()
+        
+        if (userInput != "") {
+            result := PerformSearch(userInput)
+            if (result != "") {
+                A_Clipboard := result
+                ToolTip("Data Retrieved")
+                SetTimer () => ToolTip(), TOOLTIP_DURATION
+            }
         }
     }
+    StealthGui.OnEvent("Escape", (*) => StealthGui.Destroy())
 }
 
-
-PerformContentSearch(inputVal) {
+; --- CORE SEARCH ENGINE ---
+PerformSearch(inputVal) {
     if !InStr(inputVal, "/")
         return ""
+
     parts := StrSplit(inputVal, "/")
-    searchQuery := Trim(parts[1]), fileName := Trim(parts[2])
+    searchQuery := Trim(parts[1])
+    fileName := Trim(parts[2])
+    
     filePath := REPOSITORY_FOLDER . "\" . fileName . ".txt"
+
     if !FileExist(filePath)
         return ""
 
     fileContent := FileRead(filePath)
     searchWords := StrSplit(searchQuery, " ")
-    bestMatch := "", highestScore := 0, currentBlock := "", isInsideBlock := false
+    
+    bestMatch := ""
+    highestScore := 0
+    currentBlock := ""
+    isInsideBlock := false
 
     Loop parse, fileContent, "`n", "`r" {
         line := A_LoopField
@@ -99,23 +113,3 @@ PerformContentSearch(inputVal) {
     }
     return Trim(bestMatch)
 }
-
-FindBestMatch(dir, targetName, mode) {
-    if !DirExist(dir)
-        return ""
-    bestScore := 0, bestPath := ""
-    Loop Files, dir . "\*", mode {
-        score := 0
-        searchTarget := StrLower(targetName), foundName := StrLower(A_LoopFileName)
-        Loop Parse, searchTarget {
-            if InStr(foundName, A_LoopField)
-                score++
-        }
-        if (score > bestScore) {
-            bestScore := score
-            bestPath := A_LoopFileFullPath
-        }
-    }
-    return bestPath
-}
-
