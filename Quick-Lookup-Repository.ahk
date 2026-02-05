@@ -1,26 +1,26 @@
 #Requires AutoHotkey v2.0
 
-; 1. PATH SETTINGS
-; If your folder is not in Downloads, change this to a full path like "C:\Notes"
+; ==============================================================================
+; USER CUSTOMIZATION SETTINGS
+; ==============================================================================
 
+; 1. PATH SETTINGS
 Global REPOSITORY_FOLDER := EnvGet("USERPROFILE") . "\Downloads\Quick-Lookup-Repository"
 
 ; 2. SEARCH MARKERS
-; These define the start and end of your text blocks
 Global START_TAG := "--start"
-Global END_TAG   := "--end"
+Global END_TAG := "--end"
 
 ; 3. VISUAL SETTINGS (Stealth Bar)
-Global STEALTH_BG_COLOR := "202020"    ; Dark Gray hex code
-Global STEALTH_TEXT_COLOR := "cWhite"  ; White text (prefix with 'c')
-Global STEALTH_FONT_SIZE := "s12"      ; Font size 12
+Global STEALTH_BG_COLOR := "202020"
+Global STEALTH_TEXT_COLOR := "cWhite"
+Global STEALTH_FONT_SIZE := "s12"
 Global STEALTH_FONT_FACE := "Segoe UI SemiLight"
 
 ; 4. TIMING
-Global TOOLTIP_DURATION := -1000       ; How long "Data Retrieved" stays (ms)
+Global TOOLTIP_DURATION := -1000
 
 ; Trigger: Shift + L (Visual Mode)
-
 +l:: {
     IB := InputBox("Query: keywords /FILENAME", "Quick-Lookup Repository", "w400 h120")
     if (IB.Result = "Cancel" || IB.Value = "")
