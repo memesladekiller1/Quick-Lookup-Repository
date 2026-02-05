@@ -1,6 +1,71 @@
-﻿#Requires AutoHotkey v2.0
+#Requires AutoHotkey v2.0
 
-; --- THE SEARCH ENGINE (Same as before) ---
+; 1. PATH SETTINGS
+; If your folder is not in Downloads, change this to a full path like "C:\Notes"
+
+Global REPOSITORY_FOLDER := EnvGet("USERPROFILE") . "\Downloads\Quick-Lookup-Repository"
+
+; 2. SEARCH MARKERS
+; These define the start and end of your text blocks
+Global START_TAG := "--start"
+Global END_TAG   := "--end"
+
+; 3. VISUAL SETTINGS (Stealth Bar)
+Global STEALTH_BG_COLOR := "202020"    ; Dark Gray hex code
+Global STEALTH_TEXT_COLOR := "cWhite"  ; White text (prefix with 'c')
+Global STEALTH_FONT_SIZE := "s12"      ; Font size 12
+Global STEALTH_FONT_FACE := "Segoe UI SemiLight"
+
+; 4. TIMING
+Global TOOLTIP_DURATION := -1000       ; How long "Data Retrieved" stays (ms)
+
+; Trigger: Shift + L (Visual Mode)
+
++l:: {
+    IB := InputBox("Query: keywords /FILENAME", "Quick-Lookup Repository", "w400 h120")
+    if (IB.Result = "Cancel" || IB.Value = "")
+        return
+
+    result := PerformSearch(IB.Value)
+    
+    if (result != "") {
+        ResultGui := Gui("+AlwaysOnTop", "Repository Result")
+        ResultGui.SetFont("s11", "Segoe UI")
+        ResultGui.Add("Edit", "ReadOnly vScroll r15 w550", result)
+        ResultGui.Add("Button", "Default w100", "Close").OnEvent("Click", (*) => ResultGui.Destroy())
+        ResultGui.Show()
+    }
+}
+
+; Trigger: Ctrl + P (Stealth Mode)
+^p:: {
+    StealthGui := Gui("-Caption +AlwaysOnTop +ToolWindow")
+    StealthGui.BackColor := STEALTH_BG_COLOR 
+    StealthGui.SetFont(STEALTH_FONT_SIZE . " " . STEALTH_TEXT_COLOR, STEALTH_FONT_FACE)
+    
+    EditField := StealthGui.Add("Edit", "w350 r1 -E0x200 Background333333") 
+    Btn := StealthGui.Add("Button", "Default w0 h0", "OK")
+    Btn.OnEvent("Click", ProcessInput)
+
+    MouseGetPos(&mX, &mY)
+    StealthGui.Show("x" . mX . " y" . mY)
+
+    ProcessInput(*) {
+        userInput := EditField.Value
+        StealthGui.Destroy()
+        
+        if (userInput != "") {
+            result := PerformSearch(userInput)
+            if (result != "") {
+                A_Clipboard := result
+                ToolTip("Data Retrieved")
+                SetTimer () => ToolTip(), TOOLTIP_DURATION
+            }
+        }
+    }
+    StealthGui.OnEvent("Escape", (*) => StealthGui.Destroy())
+}
+
 PerformSearch(inputVal) {
     if !InStr(inputVal, "/")
         return ""
@@ -9,8 +74,7 @@ PerformSearch(inputVal) {
     searchQuery := Trim(parts[1])
     fileName := Trim(parts[2])
     
-    userProfile := EnvGet("USERPROFILE")
-    filePath := userProfile . "\Downloads\cheatPDF\" . fileName . ".txt"
+    filePath := REPOSITORY_FOLDER . "\" . fileName . ".txt"
 
     if !FileExist(filePath)
         return ""
@@ -25,12 +89,12 @@ PerformSearch(inputVal) {
 
     Loop parse, fileContent, "`n", "`r" {
         line := A_LoopField
-        if InStr(line, "--start") {
+        if InStr(line, START_TAG) {
             isInsideBlock := true
             currentBlock := ""
             continue
         }
-        if InStr(line, "--end") {
+        if InStr(line, END_TAG) {
             isInsideBlock := false
             currentScore := 0
             for word in searchWords {
@@ -47,43 +111,4 @@ PerformSearch(inputVal) {
             currentBlock .= line . "`n"
     }
     return Trim(bestMatch)
-}
-
-; --- THE STEALTH INPUT TRIGGER (Ctrl + P) ---
-^p:: {
-    ; Create a borderless, "AlwaysOnTop" tiny window
-    StealthGui := Gui("-Caption +AlwaysOnTop +ToolWindow")
-    StealthGui.BackColor := "1A1A1A" ; Dark background
-    StealthGui.SetFont("s12 cWhite", "Consolas") ; Sleek font
-    
-    ; Add the input field
-    EditField := StealthGui.Add("Edit", "w300 r1 -E0x200 Background222222") 
-    
-    ; Hidden button to handle the 'Enter' key
-    Btn := StealthGui.Add("Button", "Default w0 h0", "OK")
-    Btn.OnEvent("Click", ProcessInput)
-
-    ; Get mouse position to place the input there
-    MouseGetPos(&mX, &mY)
-    
-    ; Show the GUI at the mouse location
-    StealthGui.Show("x" . mX . " y" . mY)
-
-    ProcessInput(*) {
-        userInput := EditField.Value
-        StealthGui.Destroy() ; Immediately vanish
-        
-        if (userInput != "") {
-            result := PerformSearch(userInput)
-            if (result != "") {
-                A_Clipboard := result
-                ; Subtle confirmation at cursor
-                ToolTip("Ready")
-                SetTimer () => ToolTip(), -800
-            }
-        }
-    }
-
-    ; Allow Escape to cancel and close the input
-    StealthGui.OnEvent("Escape", (*) => StealthGui.Destroy())
 }
