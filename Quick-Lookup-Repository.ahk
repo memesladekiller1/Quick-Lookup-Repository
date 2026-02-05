@@ -3,7 +3,7 @@
 
 ; SETTINGS
 
-Global REPOSITORY_FOLDER := EnvGet("USERPROFILE") . "\Downloads\Quick-Lookup-Repository"
+Global REPOSITORY_FOLDER := EnvGet("USERPROFILE") . "\Downloads\DataBase"
 Global START_TAG := "--start"
 Global END_TAG   := "--end"
 
@@ -118,3 +118,4 @@ FindBestMatch(dir, targetName, mode) {
     }
     return bestPath
 }
+
