@@ -5,7 +5,7 @@
 ; ==============================================================================
 
 ; 1. PATH SETTINGS
-Global REPOSITORY_FOLDER := EnvGet("USERPROFILE") . "\Downloads\Quick-Lookup-Repository"
+Global REPOSITORY_FOLDER := EnvGet("USERPROFILE") . "\Downloads\DataBase"
 
 ; 2. SEARCH MARKERS
 Global START_TAG := "--start"
