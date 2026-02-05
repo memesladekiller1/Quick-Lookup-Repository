@@ -1,27 +1,22 @@
 #Requires AutoHotkey v2.0
 
-; USER CUSTOMIZATION SETTINGS
-
 ; 1. PATH SETTINGS
 Global REPOSITORY_FOLDER := EnvGet("USERPROFILE") . "\Downloads\DataBase"
 
 ; 2. SEARCH MARKERS
 Global START_TAG := "--start"
-Global END_TAG   := "--end"
+Global END_TAG := "--end"
 
 ; 3. VISUAL SETTINGS (Stealth Bar)
-Global STEALTH_BG_COLOR := "202020"    ; Dark Gray hex code
-Global STEALTH_TEXT_COLOR := "cWhite"  ; White text
-Global STEALTH_FONT_SIZE := "s12"      ; Font size
+Global STEALTH_BG_COLOR := "202020"
+Global STEALTH_TEXT_COLOR := "cWhite"
+Global STEALTH_FONT_SIZE := "s12"
 Global STEALTH_FONT_FACE := "Segoe UI SemiLight"
+Global TOOLTIP_DURATION := -1000
 
-; 4. TIMING
-Global TOOLTIP_DURATION := -1000       ; How long "Data Retrieved" stays (ms)
-
-
-; MODE 1: VISUAL REPOSITORY (Shift + L) - Shows a scrollable window
-+l:: {
-    IB := InputBox("Query: keywords /FILENAME", "Quick-Lookup Repository", "w400 h120")
+; Trigger: Ctrl + L (Visual)
+^l:: {
+    IB := InputBox("Query: keywords /FILENAME", "DataBase", "w400 h120")
     if (IB.Result = "Cancel" || IB.Value = "")
         return
 
@@ -36,9 +31,8 @@ Global TOOLTIP_DURATION := -1000       ; How long "Data Retrieved" stays (ms)
     }
 }
 
-; MODE 2: STEALTH RETRIEVAL (Ctrl + P) - Copies directly to clipboard
+; Trigger: Ctrl + P (Stealth)
 ^p:: {
-    ; Create borderless, sleek retrieval bar at mouse position
     StealthGui := Gui("-Caption +AlwaysOnTop +ToolWindow")
     StealthGui.BackColor := STEALTH_BG_COLOR 
     StealthGui.SetFont(STEALTH_FONT_SIZE . " " . STEALTH_TEXT_COLOR, STEALTH_FONT_FACE)
@@ -66,7 +60,6 @@ Global TOOLTIP_DURATION := -1000       ; How long "Data Retrieved" stays (ms)
     StealthGui.OnEvent("Escape", (*) => StealthGui.Destroy())
 }
 
-; --- CORE SEARCH ENGINE ---
 PerformSearch(inputVal) {
     if !InStr(inputVal, "/")
         return ""
